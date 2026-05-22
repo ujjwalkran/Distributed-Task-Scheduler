@@ -8,16 +8,57 @@ on:
 
 jobs:
   build:
+    name: Build and Test (${{matrix.os}})
+    runs-on: ${{matrix.os}}
 
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            preset: windows
+            bin_dir: build/Release
+            bench_bin: scheduler_bench.exe
+            server_bin: task_scheduler.exe
 
+          - os: ubuntu-latest
+            preset: linux
+            bin_dir: build
+            bench_bin: scheduler_bench
+            server_bin: task_scheduler
+    
     steps:
-    - uses: actions/checkout@v4
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Cache CMake dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: ${{ runner.os }}-deps-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
+      - name: Configure (Windows)
+        if: runs-on == 'Windows'
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure (Linux)
+        if: runs-on == 'Linux'
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Run Benchmark (smoke test)
+        run: ${{ matrix.bin_dir }}/${{ matrix.bench_bin }}
+        shell: bash
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ runner.os }}
+          path: |
+            ${{ matrix.bin_dir }}/${{ matrix.bench_bin }}
+            ${{ matrix.bin_dir }}/${{ matrix.server_bin }}
+          if-no-files-found: error
