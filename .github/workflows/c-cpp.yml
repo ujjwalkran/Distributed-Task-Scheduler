@@ -8,8 +8,8 @@ on:
 
 jobs:
   build:
-    name: Build and Test (${{matrix.os}})
-    runs-on: ${{matrix.os}}
+    name: Build and Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
@@ -26,11 +26,11 @@ jobs:
             bin_dir: build
             bench_bin: scheduler_bench
             server_bin: task_scheduler
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Cache CMake dependencies
         uses: actions/cache@v4
         with:
@@ -40,11 +40,11 @@ jobs:
             ${{ runner.os }}-deps-
 
       - name: Configure (Windows)
-        if: runs-on == 'Windows'
+        if: runner.os == 'Windows'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Configure (Linux)
-        if: runs-on == 'Linux'
+        if: runner.os == 'Linux'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++
 
       - name: Build
